@@ -1,28 +1,27 @@
+// Sidebar.jsx
 import React, { useState, useEffect } from 'react';
-import './sidebar.css'; // Import your own CSS for styling
+import { FaFolder, FaFolderOpen } from 'react-icons/fa';
+import './sidebar.css';
 
-// Define the Sidebar component
-function Sidebar() {
+function Sidebar({ setSelectedDir }) {
     const [folders, setFolders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [subfolders, setSubfolders] = useState({}); // Store subfolders for each folder
-    const [expanded, setExpanded] = useState({}); // Store the expanded state of folders
+    const [subfolders, setSubfolders] = useState({});
+    const [expanded, setExpanded] = useState({});
 
-    // Function to fetch folder tree data from the API
     const fetchFolders = async (dir = '') => {
         try {
-            // Encode the directory for URL
             const encodedDir = encodeURIComponent(dir);
             const response = await fetch(`http://localhost:5002/api/directories/folder_tree?dir=${encodedDir}`);
             const result = await response.json();
             
             if (result.status) {
                 if (dir === '') {
-                    setFolders(result.data); // Set root folders on initial load
+                    setFolders(result.data);
                 } else {
                     setSubfolders(prevState => ({
                         ...prevState,
-                        [dir]: result.data, // Store subfolders under the full path key
+                        [dir]: result.data,
                     }));
                 }
             } else {
@@ -31,19 +30,23 @@ function Sidebar() {
         } catch (error) {
             console.error('Error fetching folder tree:', error);
         } finally {
-            setLoading(false); // Stop loading spinner
+            setLoading(false);
         }
     };
 
-    // useEffect to call the API when the component mounts
     useEffect(() => {
-        fetchFolders(); // Fetch root folders on mount
+        fetchFolders();
     }, []);
 
-    // Function to handle folder click and fetch subfolders
-    const handleFolderClick = (directory, name) => {
+    const openFolder = (directory, name) => {
         const path = `${directory}\\${name}`;
-        if (!subfolders[path]) { // Check if subfolder is already loaded
+        // Set the selected directory to the main body when clicking the folder name
+        setSelectedDir(path);
+    };
+
+    const toggleSubfolder = (directory, name) => {
+        const path = `${directory}\\${name}`;
+        if (!subfolders[path]) {
             fetchFolders(path); // Fetch subfolders if not loaded
         }
         setExpanded(prevState => ({
@@ -52,27 +55,32 @@ function Sidebar() {
         }));
     };
 
-    // Recursive function to render folders and their subfolders
     const renderFolders = (folders, parentDirectory = '') => {
         return folders.map((folder, index) => {
             const fullPath = `${parentDirectory}\\${folder.name}`;
+            const isExpanded = expanded[fullPath];
+    
             return (
-                <li key={index} className="folder-item">
-                    <div
-                        className="folder-header"
-                        onClick={() => handleFolderClick(parentDirectory, folder.name)}
-                    >
-                        <span className={`toggle-icon ${expanded[fullPath] ? 'expanded' : ''}`}>
-                            &#9660;
+                <li key={index} className={parentDirectory ? "subfolder-item" : "folder-item"}>
+                    <div className="folder-header">
+                        {/* Toggle icon for opening/closing subfolders */}
+                        <span 
+                            className={`toggle-icon ${isExpanded ? 'expanded' : ''}`} 
+                            onClick={() => toggleSubfolder(parentDirectory, folder.name)}
+                        >
+                            {isExpanded ? <FaFolderOpen /> : <FaFolder />} {/* Folder open/closed icons */}
                         </span>
-                        <span>{folder.name}</span>
+                        {/* Folder name that triggers reading the directory */}
+                        <span onClick={() => openFolder(parentDirectory, folder.name)}>
+                            {folder.name}
+                        </span>
                     </div>
-                    {expanded[fullPath] && (
+                    {isExpanded && (
                         <ul className="subfolder-list">
                             {subfolders[fullPath] ? (
-                                renderFolders(subfolders[fullPath], fullPath) // Recursively render subfolders
+                                renderFolders(subfolders[fullPath], fullPath)
                             ) : (
-                                <li>Loading...</li>
+                                <li className="subfolder-item">Loading...</li>
                             )}
                         </ul>
                     )}
@@ -83,8 +91,6 @@ function Sidebar() {
 
     return (
         <div className="sidebar">
-            <h1 className="title">Folder Structure</h1>
-
             {loading ? (
                 <p>Loading...</p>
             ) : (

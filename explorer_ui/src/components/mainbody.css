@@ -1,0 +1,35 @@
+.main-body-container {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    /* Initial background color */
+    transition: background-color 0.3s ease;
+    /* Smooth transition */
+    padding: 10px;
+    /* Add some padding to the card body */
+    border-radius: 5px;
+    /* Optional: Add rounded corners */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    /* Optional: Add a subtle shadow */
+}
+
+.card-body:hover {
+    background-color: #f1f3f5;
+    /* Slightly darker background on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    /* Optional: Enhance shadow on hover */
+}
+
+.card-text {
+    margin-top: 10px;
+    font-size: 0.9em;
+    text-align: center;
+    word-break: break-word;
+}
