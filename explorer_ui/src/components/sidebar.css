@@ -51,3 +51,25 @@
     background-color: #e9ecef;
     padding: 8px 16px;
 }
+
+/* sidebar.css */
+.home-icon {
+    cursor: pointer;
+    /* Change cursor to pointer */
+    margin-top: 10px;
+    margin-bottom: 10px;
+    /* Space between the home icon and folder list */
+    display: flex;
+    /* Flexbox for centering */
+    align-items: center;
+    /* Center the icon vertically */
+    padding: 5px;
+    /* Add some padding */
+    color: #007bff;
+    /* Bootstrap primary color */
+}
+
+.home-icon:hover {
+    color: #0056b3;
+    /* Darker blue on hover */
+}
