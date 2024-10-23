@@ -1,8 +1,7 @@
-// Sidebar.jsx
 import React, { useState, useEffect } from 'react';
-import { FaHome , FaFolder, FaFolderOpen } from 'react-icons/fa';
+import { FaHome, FaFolder, FaFolderOpen } from 'react-icons/fa';
 import './sidebar.css';
-import { fetchFolders } from '../models/apiRequest'; // Import the fetchFolders function
+import { fetchFolders } from '../models/apiRequest';
 
 function Sidebar({ setSelectedDir }) {
     const [folders, setFolders] = useState([]);
@@ -22,23 +21,23 @@ function Sidebar({ setSelectedDir }) {
     const toggleSubfolder = (directory, name) => {
         const path = `${directory}\\${name}`;
         if (!subfolders[path]) {
-            fetchFolders(path, setLoading, setFolders, setSubfolders); // Fetch subfolders if not loaded
+            fetchFolders(path, setLoading, setFolders, setSubfolders);
         }
         setExpanded(prevState => ({
             ...prevState,
-            [path]: !prevState[path], // Toggle expanded state
+            [path]: !prevState[path],
         }));
     };
 
     const handleHomeClick = () => {
-        setSelectedDir(''); // Set the selected directory to empty string
+        setSelectedDir('');
     };
 
     const renderFolders = (folders, parentDirectory = '') => {
         return folders.map((folder, index) => {
             const fullPath = `${parentDirectory}\\${folder.name}`;
             const isExpanded = expanded[fullPath];
-    
+
             return (
                 <li key={index} className={parentDirectory ? "subfolder-item" : "folder-item"}>
                     <div className="folder-header">
@@ -46,7 +45,9 @@ function Sidebar({ setSelectedDir }) {
                             className={`toggle-icon ${isExpanded ? 'expanded' : ''}`} 
                             onClick={() => toggleSubfolder(parentDirectory, folder.name)}
                         >
-                            {isExpanded ? <FaFolderOpen /> : <FaFolder />}
+                            <span className="folder-icon">
+                                {isExpanded ? <FaFolderOpen /> : <FaFolder />}
+                            </span>
                         </span>
                         <span onClick={() => openFolder(parentDirectory, folder.name)}>
                             {folder.name}
@@ -69,8 +70,8 @@ function Sidebar({ setSelectedDir }) {
     return (
         <div className="sidebar">
             <div className="home-icon" onClick={handleHomeClick} title="Home">
-                <FaHome size={24} /> {/* Home icon */}
-                <span style={{ marginLeft: '8px' }}>Home</span> {/* Home text */}
+                <FaHome size={24} />
+                <span style={{ marginLeft: '8px' }}>Home</span>
             </div>
             {loading ? (
                 <p>Loading...</p>

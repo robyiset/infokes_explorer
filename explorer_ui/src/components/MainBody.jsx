@@ -1,10 +1,13 @@
 // components/MainBody.jsx
 import React, { useState, useEffect } from 'react';
-import './mainbody.css'; // Include your custom CSS
-import FileIcon from '../models/FileIcon'; // Import the FileIcon component
-import 'bootstrap/dist/css/bootstrap.min.css'; // Import Bootstrap
-import { fetchDirectoryContent } from '../models/apiRequest'; // Import the fetchDirectoryContent function
-import RightClickMenu from '../functions/RightClickMenu'; // Import the RightClickMenu component
+import './mainbody.css';
+import FileIcon from '../models/FileIcon';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import { fetchDirectoryContent, manageDirectory } from '../models/apiRequest';
+import RightClickMenu from '../functions/RightClickMenu';
+import SpManageDirectory from '../models/sp_manage_directory'
+import Navbar from './Navbar'; // Import the Navbar component
+import Swal from 'sweetalert2'; // Import SweetAlert
 
 function MainBody({ selectedDir }) {
     const [directoryContent, setDirectoryContent] = useState([]);
@@ -13,54 +16,127 @@ function MainBody({ selectedDir }) {
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const [selectedItem, setSelectedItem] = useState(null);
     const [clipboard, setClipboard] = useState({ action: null, item: null });
+    const [currentDir, setCurrentDir] = useState(selectedDir);
+    const [history, setHistory] = useState([]); // For back and forward navigation
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const [sp_manage_directory, setManageDirectory] = useState([]);
 
     useEffect(() => {
         if (selectedDir !== undefined && selectedDir !== null) {
+            setCurrentDir(selectedDir); // Set current directory when selectedDir changes
             fetchDirectoryContent(selectedDir, setLoading, setDirectoryContent);
         }
-    }, [selectedDir]); // Depend on selectedDir
+    }, [selectedDir]);
 
     const handleRightClick = (event, item) => {
-        event.preventDefault(); // Prevent the default context menu
+        event.preventDefault();
         setSelectedItem(item);
         setMenuPosition({ x: event.clientX, y: event.clientY });
         setMenuVisible(true);
     };
 
     const handleDoubleClick = (item) => {
-        // Check if the item is a folder
         if (item.type === 'FOLDER') {
-            const newDir = `${selectedDir}\\${item.name}`; // Construct the new directory path
-            fetchDirectoryContent(newDir, setLoading, setDirectoryContent); // Fetch content for the new directory
+            const newDir = `${currentDir}\\${item.name}`;
+            updateHistory(currentDir); // Update history for back navigation
+            fetchDirectoryContent(newDir, setLoading, setDirectoryContent);
+            setCurrentDir(newDir); // Update the current directory
+        }
+    };
+
+    const updateHistory = (newDir) => {
+        const updatedHistory = [...history.slice(0, historyIndex + 1), newDir];
+        setHistory(updatedHistory);
+        setHistoryIndex(updatedHistory.length - 1);
+    };
+
+    const handleBack = () => {
+        if (historyIndex > 0) {
+            setHistoryIndex(prev => prev - 1);
+            const previousDir = history[historyIndex - 1];
+            setCurrentDir(previousDir);
+            fetchDirectoryContent(previousDir, setLoading, setDirectoryContent);
+        }
+    };
+
+    const handleForward = () => {
+        if (historyIndex < history.length - 1) {
+            setHistoryIndex(prev => prev + 1);
+            const nextDir = history[historyIndex + 1];
+            setCurrentDir(nextDir);
+            fetchDirectoryContent(nextDir, setLoading, setDirectoryContent);
+        }
+    };
+
+    const handleChangeDir = (newDir) => {
+        if (newDir) {
+            updateHistory(currentDir); // Update history before changing directory
+            setCurrentDir(newDir);
+            fetchDirectoryContent(newDir, setLoading, setDirectoryContent);
         }
     };
 
     const handleCopy = () => {
-        setClipboard({ action: 'copy', item: selectedItem });
+        setManageDirectory(new SpManageDirectory(
+            selectedItem.directory,
+            selectedItem.name,
+            selectedItem.type,
+            'COPY'
+          ));
+        
     };
 
     const handleCut = () => {
-        setClipboard({ action: 'cut', item: selectedItem });
-        setDirectoryContent(prev => 
-            prev.map(item => 
-                item.name === selectedItem.name ? { ...item, cut: true } : item
-            )
-        );
+        setManageDirectory(new SpManageDirectory(
+            selectedItem.directory,
+            selectedItem.name,
+            selectedItem.type,
+            'CUT'
+          ));
     };
 
-    const handlePaste = () => {
-        if (clipboard.action === 'copy' || clipboard.action === 'cut') {
-            const newItem = { ...clipboard.item, cut: clipboard.action === 'cut' };
-            setDirectoryContent(prev => [...prev, newItem]);
-            setClipboard({ action: null, item: null }); // Clear clipboard after pasting
+    const handlePaste = async () => {
+        if (sp_manage_directory.action === 'copy' || sp_manage_directory.action === 'cut') {
+
+            await processDirectoryManagement(sp_manage_directory, currentDir, setLoading, setDirectoryContent);
         }
     };
 
-    const handleDelete = () => {
-        setDirectoryContent(prev => 
-            prev.filter(item => item.name !== selectedItem.name)
-        );
+    const handleDelete = async () => {
+        setManageDirectory(new SpManageDirectory(
+            selectedItem.directory,
+            selectedItem.name,
+            selectedItem.type,
+            'CUT'
+          ));
+
+        await processDirectoryManagement(sp_manage_directory, currentDir, setLoading, setDirectoryContent);
     };
+
+    const processDirectoryManagement = async (sp_manage_directory, currentDir, setLoading, setDirectoryContent) => {
+        Swal.fire({
+            title: 'Processing...',
+            text: 'Please wait while we manage the directory.',
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            allowOutsideClick: false,
+        });
+    
+        // Call manageDirectory and wait for the response
+        const response = await manageDirectory(sp_manage_directory, currentDir, setLoading, setDirectoryContent);
+    
+        // Close loading alert
+        Swal.close();
+    
+        // Show status message
+        Swal.fire({
+            title: response.status ? 'Success' : 'Error',
+            text: response.message,
+            icon: response.status ? 'success' : 'error',
+        });
+    };
+
 
     const handleCloseMenu = () => {
         setMenuVisible(false);
@@ -69,10 +145,20 @@ function MainBody({ selectedDir }) {
 
     return (
         <div className="main-body-container" onClick={handleCloseMenu}>
+            <Navbar 
+                currentDir={currentDir} 
+                onBack={handleBack} 
+                onForward={handleForward} 
+                onChangeDir={handleChangeDir} 
+            />
             {loading ? (
-                <p>Loading...</p>
-            ) : directoryContent.length === 0 ? ( // Check if the directory is empty
-                <p>This folder is empty.</p>
+                <div className="row">
+                    <p>Loading...</p>
+                </div>
+            ) : directoryContent.length === 0 ? (
+                <div className="row">
+                    <p>This folder is empty.</p>
+                </div>
             ) : (
                 <div className="row">
                     {directoryContent.map((item, index) => (

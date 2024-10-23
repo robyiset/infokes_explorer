@@ -43,3 +43,27 @@ export const fetchFolders = async (dir = '', setLoading, setFolders, setSubfolde
         setLoading(false);
     }
 };
+
+export const manageDirectory = async (sp_manage_directory, currentDir, setLoading, setDirectoryContent) => {
+    setLoading(true);
+    try {
+        const response = await fetch('http://localhost:5002/api/directories/manage_directory', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(sp_manage_directory),
+        });
+        
+        if (response.ok) {
+            // Refresh the directory content after a successful operation
+            await fetchDirectoryContent(currentDir, setLoading, setDirectoryContent);
+        } else {
+            console.error('Failed to manage directory:', response.statusText);
+        }
+    } catch (error) {
+        console.error('Error managing directory:', error);
+    } finally {
+        setLoading(false);
+    }
+};

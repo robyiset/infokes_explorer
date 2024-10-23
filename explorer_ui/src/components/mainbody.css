@@ -1,5 +1,4 @@
 .main-body-container {
-    padding: 20px;
     overflow-y: auto;
     height: 100vh;
 }
@@ -33,4 +32,19 @@
     font-size: 0.9em;
     text-align: center;
     word-break: break-word;
+}
+
+.row {
+    padding: 10px;
+    /* Add padding to each row */
+}
+
+.navbar-icon {
+    cursor: pointer;
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-bottom: 6px;
+    /* Add margin for spacing */
+    font-size: 18px;
+    /* Adjust icon size as needed */
 }
