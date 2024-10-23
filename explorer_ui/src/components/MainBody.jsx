@@ -5,7 +5,7 @@ import FileIcon from '../models/FileIcon';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { fetchDirectoryContent, manageDirectory } from '../models/apiRequest';
 import RightClickMenu from '../functions/RightClickMenu';
-import SpManageDirectory from '../models/sp_manage_directory'
+import SpManageDirectory from '../models/sp_manage_directory';
 import Navbar from './Navbar'; // Import the Navbar component
 import Swal from 'sweetalert2'; // Import SweetAlert
 
@@ -13,13 +13,15 @@ function MainBody({ selectedDir }) {
     const [directoryContent, setDirectoryContent] = useState([]);
     const [loading, setLoading] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
+    const [menupaste, setMenuPaste] = useState(false);
+    const [menumanage, setMenuManage] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const [selectedItem, setSelectedItem] = useState(null);
     const [clipboard, setClipboard] = useState({ action: null, item: null });
     const [currentDir, setCurrentDir] = useState(selectedDir);
     const [history, setHistory] = useState([]); // For back and forward navigation
     const [historyIndex, setHistoryIndex] = useState(-1);
-    const [sp_manage_directory, setManageDirectory] = useState([]);
+    const [sp_manage_directory, setManageDirectory] = useState(null); // Initialize as null
 
     useEffect(() => {
         if (selectedDir !== undefined && selectedDir !== null) {
@@ -28,11 +30,25 @@ function MainBody({ selectedDir }) {
         }
     }, [selectedDir]);
 
-    const handleRightClick = (event, item) => {
+    const handleRightClickOnCard = (event, item) => {
         event.preventDefault();
+        event.stopPropagation(); // Prevent the event from bubbling up to the row
         setSelectedItem(item);
         setMenuPosition({ x: event.clientX, y: event.clientY });
+        setMenuManage(true);
         setMenuVisible(true);
+    };
+
+    const handleRightClickOnEmptySpace = (event) => {
+        event.preventDefault();
+        setSelectedItem(null); // No item selected
+        setMenuPosition({ x: event.clientX, y: event.clientY });
+        setMenuManage(false);
+        setMenuVisible(true);
+    };
+
+    const handleRefresh = () => {
+        fetchDirectoryContent(currentDir, setLoading, setDirectoryContent);
     };
 
     const handleDoubleClick = (item) => {
@@ -77,40 +93,56 @@ function MainBody({ selectedDir }) {
     };
 
     const handleCopy = () => {
-        setManageDirectory(new SpManageDirectory(
-            selectedItem.directory,
-            selectedItem.name,
-            selectedItem.type,
-            'COPY'
-          ));
-        
+        if (selectedItem) {
+            setManageDirectory(new SpManageDirectory(
+                selectedItem.directory,
+                selectedItem.name,
+                selectedItem.type,
+                'COPY',
+                currentDir
+            ));
+            setMenuPaste(true);
+        }
     };
 
     const handleCut = () => {
-        setManageDirectory(new SpManageDirectory(
-            selectedItem.directory,
-            selectedItem.name,
-            selectedItem.type,
-            'CUT'
-          ));
+        if (selectedItem) {
+            setManageDirectory(new SpManageDirectory(
+                selectedItem.directory,
+                selectedItem.name,
+                selectedItem.type,
+                'CUT',
+                currentDir
+            ));
+            setMenuPaste(true);
+        }
     };
 
     const handlePaste = async () => {
-        if (sp_manage_directory.action === 'copy' || sp_manage_directory.action === 'cut') {
-
-            await processDirectoryManagement(sp_manage_directory, currentDir, setLoading, setDirectoryContent);
+        setMenuPaste(false);
+        if (sp_manage_directory && (sp_manage_directory.action === 'COPY' || sp_manage_directory.action === 'CUT')) {
+            const updatedManageDirectory = new SpManageDirectory(
+                sp_manage_directory.mdir,   
+                sp_manage_directory.mname,  
+                sp_manage_directory.mtype,   
+                sp_manage_directory.action,  
+                currentDir                  
+            );
+            await processDirectoryManagement(updatedManageDirectory, currentDir, setLoading, setDirectoryContent);
         }
     };
 
     const handleDelete = async () => {
-        setManageDirectory(new SpManageDirectory(
-            selectedItem.directory,
-            selectedItem.name,
-            selectedItem.type,
-            'CUT'
-          ));
+        if (selectedItem) {
 
-        await processDirectoryManagement(sp_manage_directory, currentDir, setLoading, setDirectoryContent);
+            await processDirectoryManagement(new SpManageDirectory(
+                selectedItem.directory,
+                selectedItem.name,
+                selectedItem.type,
+                'DELETE',
+                currentDir
+            ), currentDir, setLoading, setDirectoryContent);
+        }
     };
 
     const processDirectoryManagement = async (sp_manage_directory, currentDir, setLoading, setDirectoryContent) => {
@@ -122,13 +154,13 @@ function MainBody({ selectedDir }) {
             },
             allowOutsideClick: false,
         });
-    
+
         // Call manageDirectory and wait for the response
         const response = await manageDirectory(sp_manage_directory, currentDir, setLoading, setDirectoryContent);
-    
+
         // Close loading alert
         Swal.close();
-    
+
         // Show status message
         Swal.fire({
             title: response.status ? 'Success' : 'Error',
@@ -137,14 +169,13 @@ function MainBody({ selectedDir }) {
         });
     };
 
-
     const handleCloseMenu = () => {
         setMenuVisible(false);
         setSelectedItem(null);
     };
 
     return (
-        <div className="main-body-container" onClick={handleCloseMenu}>
+        <div className="main-body-container" onClick={handleCloseMenu} onContextMenu={(event) => event.preventDefault()}>
             <Navbar 
                 currentDir={currentDir} 
                 onBack={handleBack} 
@@ -156,19 +187,20 @@ function MainBody({ selectedDir }) {
                     <p>Loading...</p>
                 </div>
             ) : directoryContent.length === 0 ? (
-                <div className="row">
+                <div className="row" onContextMenu={(event) => handleRightClickOnEmptySpace(event)}>
                     <p>This folder is empty.</p>
                 </div>
             ) : (
-                <div className="row">
+                <div className="row" onContextMenu={(event) => handleRightClickOnEmptySpace(event)}>
                     {directoryContent.map((item, index) => (
                         <div 
                             key={index} 
-                            className="col-12 col-sm-1 mb-3" 
-                            onContextMenu={(event) => handleRightClick(event, item)} 
-                            onDoubleClick={() => handleDoubleClick(item)} 
-                        >
-                            <div className={`card text-center ${item.cut ? 'opacity-75' : ''}`}>
+                            className="col-12 col-sm-1 mb-3">
+                            <div 
+                                className={`card text-center ${sp_manage_directory && sp_manage_directory.action === 'CUT' 
+                                && item.name === sp_manage_directory.mname && item.directory === sp_manage_directory.mdir ? 'opacity-75' : ''}`} 
+                                onContextMenu={(event) => handleRightClickOnCard(event, item)} 
+                                onDoubleClick={() => handleDoubleClick(item)}>
                                 <div className="card-body">
                                     <FileIcon fileType={item.type} fileName={item.name} />
                                     <p className="card-text">{item.name}</p>
@@ -187,6 +219,9 @@ function MainBody({ selectedDir }) {
                 onPaste={handlePaste} 
                 onDelete={handleDelete} 
                 onClose={handleCloseMenu} 
+                onRefresh={handleRefresh} 
+                onManage={menumanage}
+                showPasteOption={menupaste} // Show paste option only when no item is selected
             />
         </div>
     );

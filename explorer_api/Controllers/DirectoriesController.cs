@@ -3,6 +3,7 @@ using explorer_api.Database;
 using explorer_api.Database.Table;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace explorer_api.Controllers
 {
@@ -51,33 +52,40 @@ namespace explorer_api.Controllers
         [Route("manage_directory")]
         public async Task<JsonResult> ManageDirectory([FromBody] sp_manage_directory request)
         {
+            if (string.IsNullOrEmpty(request.Mtype))
+            {
+                return Json(new { status = false, message = "Type parameter cannot be NULL" });
+            }
+            if (string.IsNullOrEmpty(request.Action))
+            {
+                return Json(new { status = false, message = "Action parameter cannot be NULL" });
+            }
+
             try
             {
-                var statusParam = new Npgsql.NpgsqlParameter("status", NpgsqlTypes.NpgsqlDbType.Boolean) { Direction = System.Data.ParameterDirection.Output };
-                var messageParam = new Npgsql.NpgsqlParameter("message", NpgsqlTypes.NpgsqlDbType.Text) { Direction = System.Data.ParameterDirection.Output };
+                var sql = "CALL sp_manage_directory(@mdir, @mname, @mtype, @action, @target)";
 
+                // Execute the command
                 await Infokes_Explorer.Database.ExecuteSqlRawAsync(
-                    "CALL manage_directory(@p0, @p1, @p2, @p3, @p4, OUT @status, OUT @message)",
-                    request.Mdir,
-                    request.Mname,
-                    request.Mtype,
-                    request.Action,
-                    request.Target,
-                    statusParam,
-                    messageParam
+                    sql,
+                    new NpgsqlParameter("mdir", request.Mdir),
+                    new NpgsqlParameter("mname", request.Mname),
+                    new NpgsqlParameter("mtype", request.Mtype),
+                    new NpgsqlParameter("action", request.Action),
+                    new NpgsqlParameter("target", request.Target)
                 );
 
-                // Get the output parameters
-                var status = (bool)statusParam.Value;
-                var message = (string)messageParam.Value;
-
-                return Json(new { status, message });
+                return Json(new { status = true, message = "Operation completed successfully." });
             }
             catch (Exception ex)
             {
-                return Json(new { status = false, message = ex.Message });
+                return Json(new { status = false, message = ex.Message + "\n" + ex.Source + "\n" + ex.StackTrace, request });
             }
         }
+
+
+
+
 
     }
 }

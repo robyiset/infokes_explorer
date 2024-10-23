@@ -3,6 +3,13 @@
     height: 100vh;
 }
 
+.card {
+    position: relative;
+    /* Ensures that the card can be positioned above others */
+    z-index: 500;
+    /* A higher z-index makes it appear on top of others */
+}
+
 .card-body {
     display: flex;
     flex-direction: column;
