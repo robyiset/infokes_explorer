@@ -13,10 +13,6 @@ Infokes Explorer is a web application that provides file and directory managemen
 - **Frontend**: React JS
 - **Node.js**: Version 20.18.0
 
-## Installation
-
-Follow the steps below to get the project up and running locally.
-
 ### Prerequisites
 
 Make sure you have the following installed on your system:
