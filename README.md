@@ -2,11 +2,11 @@
 
 A full-stack web application using PostgreSQL, .NET Core 8 for backend APIs, and React JS for the frontend.
 
-## Project Overview
+### Project Overview
 
 Infokes Explorer is a web application that provides file and directory management capabilities. It consists of a React JS frontend, a .NET Core 8 backend API, and a PostgreSQL 16 database. The backend provides RESTful APIs consumed by the frontend.
 
-## Technologies Used
+### Technologies Used
 
 - **Database**: PostgreSQL (version 16)
 - **Backend**: .NET Core 8
